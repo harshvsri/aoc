@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs, i32, iter::zip};
 
-fn _parse_input() -> (Vec<i32>, Vec<i32>) {
+fn parse_input() -> (Vec<i32>, Vec<i32>) {
     let content = fs::read_to_string("./input.txt")
         .expect("input.txt should be present in the root directory.");
 
@@ -30,8 +30,8 @@ fn _parse_input() -> (Vec<i32>, Vec<i32>) {
     (left, right)
 }
 
-pub fn _solve() {
-    let (left, right) = _parse_input();
+pub fn solve() {
+    let (left, right) = parse_input();
 
     let (mut part_one_res, mut part_two_res) = (0, 0);
 
