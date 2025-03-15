@@ -1,6 +1,6 @@
 use std::{collections::HashSet, fs};
 
-pub fn get_trailheads() {
+pub fn get_all_trailheads_score() {
     let content = fs::read_to_string("input.txt")
         .expect("input.txt should be present in the root directory.");
 
@@ -10,35 +10,46 @@ pub fn get_trailheads() {
             line.chars()
                 .map(|ch| {
                     ch.to_digit(10)
-                        .expect("Every character must be a valid number.")
+                        .expect("Every character must be a valid number.") as u8
                 })
-                .collect::<Vec<u32>>()
+                .collect::<Vec<_>>()
         })
-        .collect::<Vec<Vec<u32>>>();
+        .collect::<Vec<Vec<_>>>();
 
-    let starting_points = find_starting_points(&map);
-    println!("Starting points: {:?}", starting_points);
+    let trailheads = find_points(&map, 0);
+    let trailends = find_points(&map, 9);
+    println!("Starting points: {:?}", trailheads);
+    println!("Ending points: {:?}", trailends);
 
-    let dirs = vec![(1, 0), (-1, 0), (0, 1), (0, -1)];
-    let mut visited: HashSet<(i32, i32)> = HashSet::new();
+    let dirs: Vec<(i8, i8)> = vec![(1, 0), (-1, 0), (0, 1), (0, -1)];
+    let mut visited = HashSet::new();
+    let mut visited_trailends = HashSet::new();
 
-    let mut hiking_paths = 0;
+    let mut total_score = 0;
 
-    for (index, &(row, col)) in starting_points.iter().enumerate() {
-        let paths = get_hiking_paths((row as i32, col as i32), &map, &dirs, &mut visited);
-        println!("{}. Hiking paths from ({},{}): {}", index, row, col, paths);
-        hiking_paths += paths;
+    for (index, &(row, col)) in trailheads.iter().enumerate() {
+        visited_trailends.clear();
+
+        let trailhead_score = get_trailheads_score(
+            (row, col),
+            &map,
+            &dirs,
+            &mut visited,
+            &mut visited_trailends,
+        );
+        println!("{}. ({},{}) -> {}", index + 1, row, col, trailhead_score);
+        total_score += trailhead_score;
     }
 
-    println!("Total hiking paths: {}", hiking_paths);
+    println!("Total hiking paths: {}", total_score);
 }
 
-fn find_starting_points(map: &Vec<Vec<u32>>) -> Vec<(usize, usize)> {
+fn find_points(map: &Vec<Vec<u8>>, value: u8) -> Vec<(usize, usize)> {
     let mut start_pos = Vec::new();
 
     for row in 0..map.len() {
         for col in 0..map[0].len() {
-            if map[row][col] == 0 {
+            if map[row][col] == value {
                 start_pos.push((row, col));
             }
         }
@@ -46,31 +57,30 @@ fn find_starting_points(map: &Vec<Vec<u32>>) -> Vec<(usize, usize)> {
     start_pos
 }
 
-fn get_hiking_paths(
-    pos: (i32, i32),
-    map: &Vec<Vec<u32>>,
-    dirs: &Vec<(i32, i32)>,
-    visited: &mut HashSet<(i32, i32)>,
+fn get_trailheads_score(
+    pos: (usize, usize),
+    map: &Vec<Vec<u8>>,
+    dirs: &Vec<(i8, i8)>,
+    visited: &mut HashSet<(usize, usize)>,
+    visited_trailends: &mut HashSet<(usize, usize)>,
 ) -> u32 {
-    let curr_val = map[pos.0 as usize][pos.1 as usize];
-    if visited.len() == 9 {
-        if curr_val == 9 {
-            return 1;
-        }
-        return 0;
+    let curr_val = map[pos.0][pos.1];
+
+    if visited.len() == 9 && curr_val == 9 && !visited_trailends.contains(&pos) {
+        visited_trailends.insert(pos);
+        return 1;
     }
 
     visited.insert(pos);
-
     let mut count = 0;
-    for (dx, dy) in dirs {
-        let next_pos = (pos.0 + dx, pos.1 + dy);
+    for &(dx, dy) in dirs {
+        let next_pos = (pos.0 as isize + dx as isize, pos.1 as isize + dy as isize);
+        if is_valid(map, next_pos) {
+            let next_pos = (next_pos.0 as usize, next_pos.1 as usize);
 
-        if is_valid(map, next_pos)
-            && !visited.contains(&next_pos)
-            && map[next_pos.0 as usize][next_pos.1 as usize] == curr_val + 1
-        {
-            count += get_hiking_paths(next_pos, map, dirs, visited)
+            if !visited.contains(&next_pos) && map[next_pos.0][next_pos.1] == curr_val + 1 {
+                count += get_trailheads_score(next_pos, map, dirs, visited, visited_trailends)
+            }
         }
     }
 
@@ -78,6 +88,6 @@ fn get_hiking_paths(
     count
 }
 
-fn is_valid(map: &Vec<Vec<u32>>, (row, col): (i32, i32)) -> bool {
-    row >= 0 && row < map.len() as i32 && col >= 0 && col < map[0].len() as i32
+fn is_valid(map: &Vec<Vec<u8>>, (row, col): (isize, isize)) -> bool {
+    row >= 0 && row < map.len() as isize && col >= 0 && col < map[0].len() as isize
 }
