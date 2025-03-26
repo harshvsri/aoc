@@ -23,20 +23,11 @@ pub fn get_all_trailheads_score() {
 
     let dirs: Vec<(i8, i8)> = vec![(1, 0), (-1, 0), (0, 1), (0, -1)];
     let mut visited = HashSet::new();
-    let mut visited_trailends = HashSet::new();
 
     let mut total_score = 0;
 
     for (index, &(row, col)) in trailheads.iter().enumerate() {
-        visited_trailends.clear();
-
-        let trailhead_score = get_trailheads_score(
-            (row, col),
-            &map,
-            &dirs,
-            &mut visited,
-            &mut visited_trailends,
-        );
+        let trailhead_score = get_trailheads_score((row, col), &map, &dirs, &mut visited);
         println!("{}. ({},{}) -> {}", index + 1, row, col, trailhead_score);
         total_score += trailhead_score;
     }
@@ -62,12 +53,10 @@ fn get_trailheads_score(
     map: &Vec<Vec<u8>>,
     dirs: &Vec<(i8, i8)>,
     visited: &mut HashSet<(usize, usize)>,
-    visited_trailends: &mut HashSet<(usize, usize)>,
 ) -> u32 {
     let curr_val = map[pos.0][pos.1];
 
-    if visited.len() == 9 && curr_val == 9 && !visited_trailends.contains(&pos) {
-        visited_trailends.insert(pos);
+    if visited.len() == 9 && curr_val == 9 {
         return 1;
     }
 
@@ -79,7 +68,7 @@ fn get_trailheads_score(
             let next_pos = (next_pos.0 as usize, next_pos.1 as usize);
 
             if !visited.contains(&next_pos) && map[next_pos.0][next_pos.1] == curr_val + 1 {
-                count += get_trailheads_score(next_pos, map, dirs, visited, visited_trailends)
+                count += get_trailheads_score(next_pos, map, dirs, visited)
             }
         }
     }
