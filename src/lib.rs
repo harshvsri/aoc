@@ -9,4 +9,5 @@
 //
 // The `pub mod year2024;` line below exposes the entire `year2024` module to users of this library.
 
+pub mod year2023;
 pub mod year2024;
