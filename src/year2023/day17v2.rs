@@ -52,17 +52,17 @@ pub fn get_heat_loss() {
     ];
 
     let mut pq = BinaryHeap::from([
-        (Reverse(grid[0][1]), (0, 1), Direction::East, 2),
-        (Reverse(grid[1][0]), (1, 0), Direction::South, 2),
+        (Reverse(grid[0][1]), (0, 1), Direction::East, 1),
+        (Reverse(grid[1][0]), (1, 0), Direction::South, 1),
     ]);
     let mut visited = HashSet::new();
 
-    while let Some((heat, (x, y), curr_dir, rem_steps)) = pq.pop() {
-        if !visited.insert(((x, y), curr_dir.clone(), rem_steps)) {
+    while let Some((heat, (x, y), curr_dir, steps)) = pq.pop() {
+        if !visited.insert(((x, y), curr_dir.clone(), steps)) {
             continue;
         }
 
-        if x == grid.len() as isize - 1 && y == grid[0].len() as isize - 1 {
+        if x == grid.len() as isize - 1 && y == grid[0].len() as isize - 1 && steps >= 4 {
             println!("Heat incurred({x},{y}) -> {}", heat.0);
             break;
         }
@@ -70,14 +70,11 @@ pub fn get_heat_loss() {
         for dir in &dirs {
             let (dx, dy) = dir.to_coords();
             let (new_x, new_y) = (x + dx, y + dy);
-            let new_rem_steps = if *dir == curr_dir && rem_steps > 0 {
-                rem_steps - 1
-            } else {
-                2
-            };
+            let new_steps = if *dir == curr_dir { steps + 1 } else { 1 };
 
             if *dir == curr_dir.complementary()
-                || *dir == curr_dir && rem_steps == 0
+                || *dir != curr_dir && steps < 4
+                || *dir == curr_dir && steps == 10
                 || new_x < 0
                 || new_x == grid.len() as isize
                 || new_y < 0
@@ -90,7 +87,7 @@ pub fn get_heat_loss() {
                 Reverse(grid[new_x as usize][new_y as usize] + heat.0),
                 (new_x, new_y),
                 dir.clone(),
-                new_rem_steps,
+                new_steps,
             ));
         }
     }
