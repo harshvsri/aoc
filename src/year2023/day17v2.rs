@@ -1,4 +1,4 @@
-use std::cmp::{min, Reverse};
+use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashSet};
 
 #[derive(PartialEq, Hash, Clone, PartialOrd, Eq, Ord)]
@@ -55,24 +55,21 @@ pub fn get_heat_loss() {
         (Reverse(grid[0][1]), (0, 1), Direction::East, 2),
         (Reverse(grid[1][0]), (1, 0), Direction::South, 2),
     ]);
-
     let mut visited = HashSet::new();
-    let mut min_heat_grid = vec![vec![u32::MAX; 13]; 13];
-    min_heat_grid[0][0] = 0;
 
-    while !pq.is_empty() {
-        let (heat, (x, y), curr_dir, rem_steps) = pq.pop().expect("Heap must not be empty");
-
-        visited.insert(((x, y), curr_dir.clone(), rem_steps));
-        min_heat_grid[x as usize][y as usize] = min(min_heat_grid[x as usize][y as usize], heat.0);
+    while let Some((heat, (x, y), curr_dir, rem_steps)) = pq.pop() {
+        if !visited.insert(((x, y), curr_dir.clone(), rem_steps)) {
+            continue;
+        }
 
         if x == grid.len() as isize - 1 && y == grid[0].len() as isize - 1 {
+            println!("Heat incurred({x},{y}) -> {}", heat.0);
             break;
         }
 
         for dir in &dirs {
             let (dx, dy) = dir.to_coords();
-            let (x, y) = (x + dx, y + dy);
+            let (new_x, new_y) = (x + dx, y + dy);
             let new_rem_steps = if *dir == curr_dir && rem_steps > 0 {
                 rem_steps - 1
             } else {
@@ -81,37 +78,20 @@ pub fn get_heat_loss() {
 
             if *dir == curr_dir.complementary()
                 || *dir == curr_dir && rem_steps == 0
-                || visited.contains(&((x, y), dir.clone(), new_rem_steps))
-                || x < 0
-                || x == grid.len() as isize
-                || y < 0
-                || y == grid[0].len() as isize
+                || new_x < 0
+                || new_x == grid.len() as isize
+                || new_y < 0
+                || new_y == grid[0].len() as isize
             {
                 continue;
             }
 
             pq.push((
-                Reverse(grid[x as usize][y as usize] + heat.0),
-                (x, y),
+                Reverse(grid[new_x as usize][new_y as usize] + heat.0),
+                (new_x, new_y),
                 dir.clone(),
                 new_rem_steps,
             ));
         }
-    }
-
-    // Hepler Function.
-    for row in min_heat_grid {
-        let row = row
-            .iter()
-            .map(|val| {
-                if *val == u32::MAX {
-                    "    ".to_string()
-                } else {
-                    format!("{: <4}", val.to_string())
-                }
-            })
-            .collect::<Vec<_>>();
-
-        println!("{}", row.join(" "));
     }
 }
