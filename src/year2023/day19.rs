@@ -22,18 +22,12 @@ pub fn process() {
             (name.to_string(), Workflow::new(&flow[..flow.len() - 1]))
         })
         .collect::<HashMap<_, _>>();
-    for (key, val) in &workflow_map {
-        println!("{key} -> {:?}", val);
-    }
 
-    let mut res = 0;
-    for part in parts {
-        let dest = part.process("in".to_string(), &workflow_map);
-        if dest == Destination::Accept {
-            res += part.get_sum();
-        }
-        println!("{:?}", dest);
-    }
+    let res = parts
+        .iter()
+        .filter(|part| part.process("in", &workflow_map) == Destination::Accept)
+        .map(|part| part.get_sum())
+        .sum::<usize>();
     println!("Res -> {res}");
 }
 
@@ -140,37 +134,29 @@ impl Part {
         }
     }
 
-    fn process(
-        &self,
-        workflow_key: String,
-        workflow_map: &HashMap<String, Workflow>,
-    ) -> Destination {
-        if workflow_key == "A" {
-            return Destination::Accept;
-        }
-        if workflow_key == "R" {
-            return Destination::Reject;
-        }
+    fn process(&self, workflow_key: &str, workflow_map: &HashMap<String, Workflow>) -> Destination {
+        let mut workflow_key = workflow_key;
+        loop {
+            print!("{workflow_key} -> ");
 
-        print!("{workflow_key} -> ");
+            let workflow = workflow_map
+                .get(workflow_key)
+                .expect("workflow_key must be valid.");
+            let mut destination = &workflow.destination;
 
-        let workflow = workflow_map
-            .get(&workflow_key)
-            .expect("workflow_key must be valid.");
-
-        let mut destination = workflow.destination.clone();
-
-        for rule in &workflow.rules {
-            if rule.is_valid(&self) {
-                destination = rule.destination.clone();
-                break;
+            for rule in &workflow.rules {
+                if rule.is_valid(&self) {
+                    destination = &rule.destination;
+                    break;
+                }
             }
-        }
 
-        if let Destination::Workflow(workflow_key) = destination {
-            self.process(workflow_key.clone(), workflow_map)
-        } else {
-            destination
+            if let Destination::Workflow(flow_key) = destination {
+                workflow_key = flow_key;
+            } else {
+                println!("{:?}", destination);
+                return destination.clone();
+            }
         }
     }
 
