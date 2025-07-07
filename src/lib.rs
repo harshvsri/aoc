@@ -11,3 +11,27 @@
 
 pub mod year2023;
 pub mod year2024;
+
+pub fn read_file() -> String {
+    std::fs::read_to_string("input.txt")
+        .expect("input.txt must be present in the root of the directory.")
+}
+
+pub fn gcd(a: u64, b: u64) -> u64 {
+    let mut x = a;
+    let mut y = b;
+
+    while y != 0 {
+        let t = y;
+        y = x % y;
+        x = t;
+    }
+    x
+}
+
+pub fn lcm(a: u64, b: u64) -> u64 {
+    if a == 0 || b == 0 {
+        return 0;
+    }
+    (a / gcd(a, b)) * b
+}

@@ -1,3 +1,4 @@
+use crate::lcm;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -24,7 +25,7 @@ impl Pulse {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum ModuleType {
     Broadcaster,
     FlipFlop(bool),
@@ -39,7 +40,7 @@ impl ModuleType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Module {
     module_type: ModuleType,
     destination_modules: Vec<String>,
@@ -134,41 +135,63 @@ pub fn count_pulse() {
         }
     }
 
-    let button_press = 1000;
-    let (mut high_pulse_count, mut low_pulse_count) = (0, 0);
+    let (dest_module_name, dest_module) = modules_map
+        .iter()
+        .filter(|(_, val)| val.destination_modules.contains(&"rx".to_string()))
+        .map(|(key, val)| (key.to_string(), val.clone()))
+        .next()
+        .expect("Iterator must not be empty.");
+
+    println!("{dest_module_name} -> {dest_module:?}");
+
     let mut queue = VecDeque::new();
+    let mut button_lenghts = vec![];
 
-    for _ in 0..button_press {
-        queue.push_back(("button".to_string(), Pulse::Low, "broadcaster".to_string()));
+    if let ModuleType::Conjunction(map) = &dest_module.module_type {
+        for src_module_name in map.keys() {
+            let mut mod_found = false;
+            let mut button_press = 0;
+            let mut map = modules_map.clone();
 
-        while !queue.is_empty() {
-            let (source, pulse, destination) = queue.pop_front().unwrap();
-
-            match pulse {
-                Pulse::High => high_pulse_count += 1,
-                Pulse::Low => low_pulse_count += 1,
-                Pulse::Dead => panic!("Dead pulse cant be transmitted."),
-            }
-
-            if let Some(module) = modules_map.get_mut(&destination) {
-                let output_pulse = module.handle_pulse(&source, pulse);
-                if output_pulse == Pulse::Dead {
-                    continue;
+            loop {
+                if mod_found {
+                    break;
                 }
+                button_press += 1;
+                queue.push_back(("button".to_string(), Pulse::Low, "broadcaster".to_string()));
 
-                for dest_module in &module.destination_modules {
-                    queue.push_back((
-                        destination.to_string(),
-                        output_pulse.clone(),
-                        dest_module.to_string(),
-                    ));
+                while !queue.is_empty() {
+                    let (source, pulse, destination) = queue.pop_front().unwrap();
+
+                    if pulse == Pulse::High
+                        && source == *src_module_name
+                        && destination == *dest_module_name
+                    {
+                        println!("{src_module_name} -> {dest_module_name} [{button_press}]");
+                        mod_found = true;
+                        button_lenghts.push(button_press);
+                        break;
+                    }
+
+                    if let Some(module) = map.get_mut(&destination) {
+                        let output_pulse = module.handle_pulse(&source, pulse);
+                        if output_pulse == Pulse::Dead {
+                            continue;
+                        }
+
+                        for dest_module in &module.destination_modules {
+                            queue.push_back((
+                                destination.to_string(),
+                                output_pulse.clone(),
+                                dest_module.to_string(),
+                            ));
+                        }
+                    }
                 }
             }
         }
-    }
 
-    println!(
-        "High Pulse({high_pulse_count})\nLow PUlse({low_pulse_count})\nRes({})",
-        high_pulse_count * low_pulse_count
-    );
+        let res = button_lenghts.iter().cloned().reduce(lcm).unwrap();
+        println!("Res -> {res}");
+    }
 }

@@ -1,8 +1,5 @@
-use std::{collections::HashMap, fs::read_to_string};
-
-fn get_file_content() -> String {
-    read_to_string("input.txt").expect("input.txt must be present in the root of the directory.")
-}
+use crate::{lcm, read_file};
+use std::collections::HashMap;
 
 fn traverse_map(
     instructions: &Vec<char>,
@@ -33,7 +30,7 @@ fn traverse_map(
 }
 
 pub fn get_steps() {
-    let content = get_file_content();
+    let content = read_file();
 
     let (instructions, map) = content
         .split_once("\n\n")
@@ -70,26 +67,6 @@ pub fn get_steps() {
         println!("Steps took by {}: {}", point.to_string(), curr_step);
     }
 
-    let total_steps = lcm_of_vec(&steps);
+    let total_steps = steps.iter().cloned().reduce(lcm).unwrap();
     println!("Total Steps: {}", total_steps);
-}
-
-fn lcm_of_vec(numbers: &[u64]) -> u64 {
-    numbers.iter().fold(1, |acc, &num| lcm(acc, num))
-}
-
-fn gcd(a: u64, b: u64) -> u64 {
-    if b == 0 {
-        a
-    } else {
-        gcd(b, a % b)
-    }
-}
-
-fn lcm(a: u64, b: u64) -> u64 {
-    if a == 0 || b == 0 {
-        0
-    } else {
-        (a * b) / gcd(a, b)
-    }
 }
