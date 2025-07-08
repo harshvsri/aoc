@@ -1,7 +1,6 @@
 use std::{
     cmp::Reverse,
-    collections::{BinaryHeap, HashSet},
-    usize,
+    collections::{BinaryHeap, HashMap},
 };
 
 enum Direction {
@@ -33,6 +32,20 @@ fn get_starting_point(grid: &Vec<Vec<char>>) -> Option<(usize, usize)> {
     return None;
 }
 
+fn wrap_coords(grid: &Vec<Vec<char>>, (mut x, mut y): (isize, isize)) -> (isize, isize) {
+    let (max_x, max_y) = (grid.len() as isize, grid[0].len() as isize);
+    (x, y) = (x % max_x, y % max_y);
+
+    if x < 0 {
+        x += max_x;
+    }
+    if y < 0 {
+        y += max_y;
+    }
+
+    (x, y)
+}
+
 pub fn count_garden_plots() {
     let grid = std::fs::read_to_string("input.txt")
         .expect("input.txt must be present in the root of the directory.")
@@ -48,56 +61,39 @@ pub fn count_garden_plots() {
         Direction::West,
     ];
 
-    let mut visited = HashSet::new();
-    let mut cost_grid = vec![vec![usize::MAX; grid[0].len()]; grid.len()];
+    let max_steps = (grid.len() / 2) + (0 * grid.len());
+    let mut visited = HashMap::new();
     let mut pq = BinaryHeap::from([(Reverse(0), (x as isize, y as isize))]);
 
     while !pq.is_empty() {
-        let (cost, (x, y)) = pq.pop().unwrap();
-        if cost.0 > 64 {
+        let (steps, (x, y)) = pq.pop().unwrap();
+        if steps.0 > max_steps {
             break;
         }
 
-        if visited.contains(&(x, y)) {
+        if visited.contains_key(&(x, y)) {
             continue;
         }
-        visited.insert((x, y));
-
-        cost_grid[x as usize][y as usize] = cost.0;
+        visited.insert((x, y), steps.0);
 
         for dir in &dirs {
             let (dx, dy) = dir.to_coords();
             let (nx, ny) = (x + dx, y + dy);
 
             // Now we have an infinite map so we need to wrap around.
-            if nx < 0
-                || nx == grid.len() as isize
-                || ny < 0
-                || ny == grid.len() as isize
-                || grid[nx as usize][ny as usize] == '#'
-            {
+            let (nx_wrap, ny_wrap) = wrap_coords(&grid, (nx, ny));
+            if grid[nx_wrap as usize][ny_wrap as usize] == '#' {
                 continue;
             }
-            pq.push((Reverse(cost.0 + 1), (nx, ny)));
+            pq.push((Reverse(steps.0 + 1), (nx, ny)));
         }
     }
 
-    let mut tiles_count = 0;
-    for row in &cost_grid {
-        println!(
-            "{}",
-            row.iter()
-                .map(|val| {
-                    if *val == usize::MAX || !(*val).is_multiple_of(2) {
-                        format!("{:>3}", "".to_string())
-                    } else {
-                        tiles_count += 1;
-                        format!("{:>3}", val.to_string())
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join(" ")
-        );
-    }
-    println!("Total tiles -> {tiles_count}");
+    println!(
+        "Steps[{max_steps}] -> Garden Plots[{}]",
+        visited
+            .iter()
+            .filter(|(_, val)| **val % 2 == max_steps % 2)
+            .count()
+    );
 }
