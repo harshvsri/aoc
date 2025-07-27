@@ -30,7 +30,7 @@ impl Dir {
     }
 }
 
-static DIRS: &'static [Dir] = &[Dir::North, Dir::East, Dir::South, Dir::West];
+const DIRS: [Dir; 4] = [Dir::North, Dir::East, Dir::South, Dir::West];
 
 fn hike((x, y): (isize, isize), map: &Vec<Vec<char>>, set: &mut HashSet<(isize, isize)>) -> usize {
     if x == map.len() as isize - 1 && y == map[0].len() as isize - 2 {
