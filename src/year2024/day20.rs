@@ -4,6 +4,16 @@ use std::{
 };
 
 const DIRS: [(isize, isize); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+const TWO_MOVE_DELTAS: [(isize, isize); 8] = [
+    (2, 0),
+    (-2, 0),
+    (0, -2),
+    (0, 2),
+    (-1, -1),
+    (-1, 1),
+    (1, -1),
+    (1, 1),
+];
 
 fn find_char(ch: char, grid: &Vec<Vec<char>>) -> Option<(isize, isize)> {
     for row in 0..grid.len() {
@@ -16,73 +26,37 @@ fn find_char(ch: char, grid: &Vec<Vec<char>>) -> Option<(isize, isize)> {
     None
 }
 
-fn time_to_finish(
-    start_pos: (isize, isize),
-    end_pos: (isize, isize),
-    grid: &Vec<Vec<char>>,
-    valid_positions: &[(isize, isize)],
-) {
-    let mut pq = BinaryHeap::from([(Reverse(0usize), start_pos, 2)]);
-    let mut visited = HashSet::new();
+fn time_to_finish(grid: &Vec<Vec<char>>, valid_positions: &[(isize, isize)]) {
+    let mut map = HashMap::new();
+    valid_positions
+        .iter()
+        .enumerate()
+        .for_each(|(time_taken, &(x, y))| {
+            for (dx, dy) in TWO_MOVE_DELTAS {
+                let (nx, ny) = (x + dx, y + dy);
+                if nx < 0 || nx == grid.len() as isize || ny < 0 || ny == grid[0].len() as isize {
+                    continue;
+                }
 
-    while !pq.is_empty() {
-        let (time, (x, y), cheat_moves) = pq.pop().unwrap();
-        if x == end_pos.0 && y == end_pos.1 {
-            println!("Time taken: {} ps.", time.0);
-        }
-
-        if !visited.insert((x, y, cheat_moves)) {
-            // We have seen this.
-            // if cheat_moves == 0 {
-            //     if let Ok(idx) = valid_positions.binary_search(&(x, y)) {
-            //         let time_taken = time.0 + valid_positions.len() - idx;
-            //         if time_taken < valid_positions.len() {
-            //             println!("Time taken: {} ps.", time_taken);
-            //         }
-            //     }
-            // }
-            continue;
-        }
-
-        for (dx, dy) in DIRS {
-            let (nx, ny) = (x + dx, y + dy);
-
-            if nx < 0 || nx == grid.len() as isize || ny < 0 || ny == grid[0].len() as isize {
-                continue;
-            }
-
-            match cheat_moves {
-                2 => {
-                    pq.push((Reverse(time.0 + 1), (nx, ny), cheat_moves - 1));
-
-                    if grid[nx as usize][ny as usize] != '#' {
-                        pq.push((Reverse(time.0 + 1), (nx, ny), cheat_moves));
+                if let Some(original_time) = valid_positions
+                    .iter()
+                    .position(|&(x, y)| x == nx && y == ny)
+                {
+                    let cheat_time = time_taken + 2;
+                    if cheat_time < original_time {
+                        let time_saved = original_time - cheat_time;
+                        *map.entry(time_saved).or_insert(0) += 1;
                     }
                 }
-                1 => {
-                    pq.push((Reverse(time.0 + 1), (nx, ny), cheat_moves - 1));
-                }
-                0 => {
-                    // Maybe we should spawn a new isolated search so that it would not be affected
-                    // by the upcoming results.
-                    // Since hashmap con have this state which will stop it from getting explored.
-                    // Or i can do something so that hasmap will not stop them like say i have
-                    // (x,y,0) now i could have been here from anywhere but just because the
-                    // previous one explored it will stop curr from exploring.
-                    // So either HACK around hashset or spawn it differently.
-                    if grid[nx as usize][ny as usize] != '#' {
-                        pq.push((Reverse(time.0 + 1), (nx, ny), cheat_moves));
-                    }
-                    // if let Ok(idx) = valid_positions.binary_search(&(nx, ny)) {
-                    //     println!("Time taken: {} ps.", time.0 + valid_positions.len() - idx);
-                    // }
-                }
-                _ => {
-                    unreachable!();
-                }
             }
-        }
-    }
+        });
+    println!(
+        "Number of cheats saving atleast 100 ps: {:?}",
+        map.iter()
+            .filter(|(k, _)| **k >= 100)
+            .map(|(_, v)| v)
+            .sum::<usize>()
+    );
 }
 
 fn get_valid_positions(
@@ -143,6 +117,5 @@ pub fn foo() {
     );
 
     let valid_positions = get_valid_positions(start_pos, end_pos, &grid);
-    println!("Valid Positions: {:?}", valid_positions.len());
-    time_to_finish(start_pos, end_pos, &grid, &valid_positions);
+    time_to_finish(&grid, &valid_positions);
 }
