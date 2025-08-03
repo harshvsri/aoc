@@ -4,16 +4,7 @@ use std::{
 };
 
 const DIRS: [(isize, isize); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
-const TWO_MOVE_DELTAS: [(isize, isize); 8] = [
-    (2, 0),
-    (-2, 0),
-    (0, -2),
-    (0, 2),
-    (-1, -1),
-    (-1, 1),
-    (1, -1),
-    (1, 1),
-];
+const CHEAT_TIME: isize = 20;
 
 fn find_char(ch: char, grid: &Vec<Vec<char>>) -> Option<(isize, isize)> {
     for row in 0..grid.len() {
@@ -27,29 +18,45 @@ fn find_char(ch: char, grid: &Vec<Vec<char>>) -> Option<(isize, isize)> {
 }
 
 fn time_to_finish(grid: &Vec<Vec<char>>, valid_positions: &[(isize, isize)]) {
-    let mut map = HashMap::new();
-    valid_positions
+    let pos_to_time: HashMap<(isize, isize), usize> = valid_positions
         .iter()
         .enumerate()
-        .for_each(|(time_taken, &(x, y))| {
-            for (dx, dy) in TWO_MOVE_DELTAS {
-                let (nx, ny) = (x + dx, y + dy);
-                if nx < 0 || nx == grid.len() as isize || ny < 0 || ny == grid[0].len() as isize {
-                    continue;
-                }
+        .map(|(time, &pos)| (pos, time))
+        .collect();
+    let mut map = HashMap::new();
 
-                if let Some(original_time) = valid_positions
-                    .iter()
-                    .position(|&(x, y)| x == nx && y == ny)
-                {
-                    let cheat_time = time_taken + 2;
-                    if cheat_time < original_time {
-                        let time_saved = original_time - cheat_time;
-                        *map.entry(time_saved).or_insert(0) += 1;
+    for (start_time, &(x, y)) in valid_positions.iter().enumerate() {
+        for cheat_time in 1..=CHEAT_TIME {
+            for time in 0..=cheat_time {
+                let (dx, dy) = (time, cheat_time - time);
+
+                let deltas = if dx == 0 {
+                    vec![(0, dy), (0, -dy)]
+                } else if dy == 0 {
+                    vec![(dx, 0), (-dx, 0)]
+                } else {
+                    vec![(dx, dy), (dx, -dy), (-dx, dy), (-dx, -dy)]
+                };
+
+                for (dx, dy) in deltas {
+                    let (nx, ny) = (x + dx, y + dy);
+
+                    if nx < 0 || nx == grid.len() as isize || ny < 0 || ny == grid[0].len() as isize
+                    {
+                        continue;
+                    }
+
+                    if let Some(&original_time) = pos_to_time.get(&(nx, ny)) {
+                        let cheat_time = start_time + cheat_time as usize;
+                        if cheat_time < original_time {
+                            let time_saved = original_time - cheat_time;
+                            *map.entry(time_saved).or_insert(0) += 1;
+                        }
                     }
                 }
             }
-        });
+        }
+    }
     println!(
         "Number of cheats saving atleast 100 ps: {:?}",
         map.iter()
@@ -117,5 +124,6 @@ pub fn foo() {
     );
 
     let valid_positions = get_valid_positions(start_pos, end_pos, &grid);
+    println!("Valid positions: {}", valid_positions.len());
     time_to_finish(&grid, &valid_positions);
 }
