@@ -6,6 +6,3 @@ edition = "2021"
 [dependencies]
 once_cell = "1.21.3"
 regex = "1.11.1"
-
-[profile.release]
-debug = true
