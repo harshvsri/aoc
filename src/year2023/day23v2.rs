@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 const DIRS: [Dir; 4] = [Dir::North, Dir::East, Dir::South, Dir::West];
 
@@ -66,9 +66,11 @@ fn compress(map: &Vec<Vec<char>>) {
     fn find_neighbors(
         node: (isize, isize),
         map: &Vec<Vec<char>>,
-        nodes: &HashSet<(isize, isize)>,
-        adjacacncy_list: &mut HashMap<(isize, isize), Vec<((isize, isize), usize)>>,
+        node_id_map: &HashMap<(isize, isize), usize>,
+        adjacacncy_list: &mut Vec<Vec<(usize, usize)>>,
     ) {
+        let node_id = node_id_map[&node];
+
         for dir in DIRS {
             let (mut x, mut y) = node;
             let (dx, dy) = dir.to_coords();
@@ -86,11 +88,8 @@ fn compress(map: &Vec<Vec<char>>) {
                     && y < map[0].len() as isize
                     && map[x as usize][y as usize] != '#'
                 {
-                    if nodes.contains(&(x, y)) {
-                        adjacacncy_list
-                            .entry(node)
-                            .and_modify(|v| v.push(((x, y), dist)))
-                            .or_insert(vec![((x, y), dist)]);
+                    if let Some(&id) = node_id_map.get(&(x, y)) {
+                        adjacacncy_list[node_id].push((id, dist));
                         break;
                     }
                 } else {
@@ -101,64 +100,77 @@ fn compress(map: &Vec<Vec<char>>) {
     }
 
     // INFO: Most of the optimization will come from avoiding hashing all togather.
+    // I have verified this using hyperfine that calculation of this doesnt affect all.
+
     fn longest_path(
-        curr_node: (isize, isize),
+        curr_node_id: usize,
         curr_dist: usize,
         max_dist: &mut usize,
-        end: (isize, isize),
+        end_node_id: usize,
         map: &Vec<Vec<char>>,
-        adjacacncy_list: &HashMap<(isize, isize), Vec<((isize, isize), usize)>>,
-        visited: &mut HashSet<(isize, isize)>,
+        adjacacncy_list: &Vec<Vec<(usize, usize)>>,
+        visited: &mut Vec<bool>,
     ) {
-        if curr_node == end {
+        if curr_node_id == end_node_id {
             *max_dist = (*max_dist).max(curr_dist);
             return;
         }
 
-        for &(neighbor, dist) in adjacacncy_list.get(&curr_node).unwrap() {
-            if !visited.insert(neighbor) {
+        for &(neighbor, dist) in &adjacacncy_list[curr_node_id] {
+            if visited[neighbor] {
                 continue;
             }
+            visited[neighbor] = true;
             longest_path(
                 neighbor,
                 curr_dist + dist,
                 max_dist,
-                end,
+                end_node_id,
                 map,
                 adjacacncy_list,
                 visited,
             );
-            visited.remove(&(neighbor));
+            visited[neighbor] = false;
         }
     }
 
     // Find all the junction nodes.
-    let mut nodes = HashSet::new();
+    let mut nodes = Vec::new();
     for row in 0..map.len() {
         for col in 0..map[0].len() {
             if is_junction((row as isize, col as isize), map) {
-                nodes.insert((row as isize, col as isize));
+                nodes.push((row as isize, col as isize));
             }
         }
     }
     println!("Junction nodes: {:?}", nodes.len());
+    let node_count = nodes.len();
 
-    let mut adjacacncy_list = HashMap::new();
-    for node in &nodes {
-        find_neighbors(*node, map, &nodes, &mut adjacacncy_list);
+    let node_id_map = nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| (node.clone(), index))
+        .collect::<HashMap<_, _>>();
+
+    let mut adjacacncy_list = vec![vec![]; node_count];
+    for node in nodes {
+        find_neighbors(node, map, &node_id_map, &mut adjacacncy_list);
     }
     println!("Adjacacncy list: {:?}", adjacacncy_list.len());
 
-    // let (start, end) = ((0, 1), (map.len() as isize - 1, map.len() as isize - 2));
-    // let mut max_dist = 0;
-    // longest_path(
-    //     start,
-    //     0,
-    //     &mut max_dist,
-    //     end,
-    //     &map,
-    //     &adjacacncy_list,
-    //     &mut HashSet::from([start]),
-    // );
-    // println!("Longest path: {max_dist}");
+    let (start, end) = ((0, 1), (map.len() as isize - 1, map.len() as isize - 2));
+    let (start_node_id, end_node_id) = (node_id_map[&start], node_id_map[&end]);
+    let mut visited = vec![false; node_count];
+    let mut max_dist = 0;
+
+    longest_path(
+        start_node_id,
+        0,
+        &mut max_dist,
+        end_node_id,
+        &map,
+        &adjacacncy_list,
+        &mut visited,
+    );
+    println!("Longest path: {max_dist}");
 }

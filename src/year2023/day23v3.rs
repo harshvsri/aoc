@@ -144,6 +144,6 @@ fn dense_longest_path(map: &[Vec<char>]) -> usize {
     }
 
     visited[start_id] = true;
-    // dfs(start_id, 0, end_id, &graph, &mut visited, &mut best);
+    dfs(start_id, 0, end_id, &graph, &mut visited, &mut best);
     best
 }
