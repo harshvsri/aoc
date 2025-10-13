@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 const DIRS: [Dir; 4] = [Dir::North, Dir::East, Dir::South, Dir::West];
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 enum Dir {
     North,
     East,
@@ -42,24 +42,22 @@ fn compress(map: &Vec<Vec<char>>) {
             let (dx, dy) = dir.to_coords();
             let (nx, ny) = (x + dx, y + dy);
 
-            if nx >= 0 && nx < map.len() as isize && ny >= 0 && ny < map[0].len() as isize {
-                if map[nx as usize][ny as usize] != '#' {
-                    valid_dirs.push(dir);
-                }
+            if nx >= 0
+                && nx < map.len() as isize
+                && ny >= 0
+                && ny < map[0].len() as isize
+                && map[nx as usize][ny as usize] != '#'
+            {
+                valid_dirs.push((dx, dy));
             }
         }
 
+        // Used a bit clever move.
         match valid_dirs.len() {
-            0 => false,
-            1 | 3 | 4 => true,
+            0 | 1 | 3 | 4 => true,
             2 => {
-                if valid_dirs.contains(&&Dir::North) && valid_dirs.contains(&&Dir::South)
-                    || valid_dirs.contains(&&Dir::East) && valid_dirs.contains(&&Dir::West)
-                {
-                    false
-                } else {
-                    true
-                }
+                let (a, b) = (valid_dirs[0], valid_dirs[1]);
+                a.0 + b.0 != 0 || a.1 + b.1 != 0
             }
             _ => panic!("Invalid number of directions, cant be more than 4"),
         }
@@ -71,20 +69,17 @@ fn compress(map: &Vec<Vec<char>>) {
         nodes: &HashSet<(isize, isize)>,
         adjacacncy_list: &mut HashMap<(isize, isize), Vec<((isize, isize), usize)>>,
     ) {
-        fn visit_direction(
-            node: (isize, isize),
-            dir: Dir,
-            map: &Vec<Vec<char>>,
-            nodes: &HashSet<(isize, isize)>,
-            adjacacncy_list: &mut HashMap<(isize, isize), Vec<((isize, isize), usize)>>,
-        ) {
+        for dir in DIRS {
             let (mut x, mut y) = node;
+            let (dx, dy) = dir.to_coords();
             let mut dist = 0;
+
             loop {
-                let (dx, dy) = dir.to_coords();
                 (x, y) = (x + dx, y + dy);
                 dist += 1;
 
+                // Well here is a bit confusion around weather should i map in both directions
+                // since wewill map for every node anyways.
                 if x >= 0
                     && x < map.len() as isize
                     && y >= 0
@@ -103,40 +98,38 @@ fn compress(map: &Vec<Vec<char>>) {
                 }
             }
         }
-
-        for dir in DIRS {
-            visit_direction(node, dir, map, nodes, adjacacncy_list);
-        }
     }
 
+    // INFO: Most of the optimization will come from avoiding hashing all togather.
     fn longest_path(
         curr_node: (isize, isize),
         curr_dist: usize,
+        max_dist: &mut usize,
+        end: (isize, isize),
         map: &Vec<Vec<char>>,
         adjacacncy_list: &HashMap<(isize, isize), Vec<((isize, isize), usize)>>,
         visited: &mut HashSet<(isize, isize)>,
-    ) -> usize {
-        // Check if we have readhed destination.
-        if curr_node.0 == map.len() as isize - 1 && curr_node.1 == map[0].len() as isize - 2 {
-            return curr_dist;
-        }
-        if !visited.insert(curr_node) {
-            return 0;
+    ) {
+        if curr_node == end {
+            *max_dist = (*max_dist).max(curr_dist);
+            return;
         }
 
-        let mut max_path = 0;
-        for (neighbor, dist) in adjacacncy_list.get(&curr_node).unwrap() {
-            max_path = max_path.max(longest_path(
-                *neighbor,
+        for &(neighbor, dist) in adjacacncy_list.get(&curr_node).unwrap() {
+            if !visited.insert(neighbor) {
+                continue;
+            }
+            longest_path(
+                neighbor,
                 curr_dist + dist,
+                max_dist,
+                end,
                 map,
                 adjacacncy_list,
                 visited,
-            ));
+            );
+            visited.remove(&(neighbor));
         }
-
-        visited.remove(&(curr_node));
-        return max_path;
     }
 
     // Find all the junction nodes.
@@ -156,6 +149,16 @@ fn compress(map: &Vec<Vec<char>>) {
     }
     println!("Adjacacncy list: {:?}", adjacacncy_list.len());
 
-    let len = longest_path((0, 1), 0, &map, &adjacacncy_list, &mut HashSet::new());
-    println!("Longest path: {len}");
+    // let (start, end) = ((0, 1), (map.len() as isize - 1, map.len() as isize - 2));
+    // let mut max_dist = 0;
+    // longest_path(
+    //     start,
+    //     0,
+    //     &mut max_dist,
+    //     end,
+    //     &map,
+    //     &adjacacncy_list,
+    //     &mut HashSet::from([start]),
+    // );
+    // println!("Longest path: {max_dist}");
 }
