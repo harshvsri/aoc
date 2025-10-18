@@ -21,6 +21,7 @@ pub mod day23;
 pub mod day23v2;
 pub mod day23v3;
 pub mod day24;
+pub mod day25;
 pub mod day3;
 pub mod day4;
 pub mod day5v1;
