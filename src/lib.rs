@@ -12,7 +12,12 @@
 pub mod year2023;
 pub mod year2024;
 
-pub fn read_file() -> String {
+pub fn read_test() -> String {
+    std::fs::read_to_string("test.txt")
+        .expect("input.txt must be present in the root of the directory.")
+}
+
+pub fn read_input() -> String {
     std::fs::read_to_string("input.txt")
         .expect("input.txt must be present in the root of the directory.")
 }

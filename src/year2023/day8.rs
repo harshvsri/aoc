@@ -1,4 +1,4 @@
-use crate::{lcm, read_file};
+use crate::{lcm, read_input};
 use std::collections::HashMap;
 
 fn traverse_map(
@@ -30,7 +30,7 @@ fn traverse_map(
 }
 
 pub fn get_steps() {
-    let content = read_file();
+    let content = read_input();
 
     let (instructions, map) = content
         .split_once("\n\n")
