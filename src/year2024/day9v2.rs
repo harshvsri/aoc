@@ -23,12 +23,6 @@ pub fn get_checksum() {
     let mut checksum = caclulate_checksum(&data);
     adjust_checksum(&mut checksum);
     println!("Final res: {:?}", checksum_hash(&checksum));
-
-    let x = &2;
-    let y = &mut 5;
-
-    if x < y {}
-    if y < x {}
 }
 
 fn caclulate_checksum(data: &str) -> Vec<Block> {

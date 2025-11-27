@@ -3,7 +3,7 @@ use std::collections::HashMap;
 /// This is a temporary workaround, meant as a stopgap for parsing and visualizing the graph structure quickly,
 /// allowing iterative development before proper algorithmic support is implemented.
 ///
-/// ```
+/// ```ignore
 /// import networkx as nx
 ///
 /// graph = nx.Graph()
