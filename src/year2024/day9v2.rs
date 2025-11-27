@@ -1,9 +1,18 @@
-use std::fs;
+use std::{fmt::Display, fs};
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 enum Block {
     Free,
     File(u32),
+}
+
+impl Display for Block {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Free => write!(f, "{:>3}", "."),
+            Self::File(id) => write!(f, "{:>3}", id),
+        }
+    }
 }
 
 pub fn get_checksum() {
@@ -11,7 +20,18 @@ pub fn get_checksum() {
         .expect("input.txt should be present in the root directory.");
 
     let data = content.lines().collect::<String>();
+    let mut checksum = caclulate_checksum(&data);
+    adjust_checksum(&mut checksum);
+    println!("Final res: {:?}", checksum_hash(&checksum));
 
+    let x = &2;
+    let y = &mut 5;
+
+    if x < y {}
+    if y < x {}
+}
+
+fn caclulate_checksum(data: &str) -> Vec<Block> {
     let mut checksum: Vec<Block> = Vec::new();
     let mut id = 0;
 
@@ -28,64 +48,67 @@ pub fn get_checksum() {
             file
         };
 
-        add_data(&mut checksum, &block, value_freq);
+        for _ in 0..value_freq {
+            checksum.push(block.clone());
+        }
     }
-
-    adjust_checksum(&mut checksum);
-    let checksum = final_checksum(&checksum);
-    println!("Final res: {}", checksum);
-}
-
-fn add_data(checksum: &mut Vec<Block>, block: &Block, times: u32) {
-    for _ in 0..times {
-        checksum.push(block.clone());
-    }
+    checksum
 }
 
 fn adjust_checksum(checksum: &mut Vec<Block>) {
-    let (mut left, mut right) = (0, checksum.len() - 1);
+    let mut data_chunks = vec![];
+    let mut free_chunks = vec![];
 
-    while left < right {
-        while left < right && checksum[left] != Block::Free {
-            left += 1;
+    let (mut ptr, mut size, mut prev_block) = (0, 0, &checksum[0]);
+    while ptr < checksum.len() {
+        if &checksum[ptr] == prev_block {
+            size += 1;
+        } else {
+            match prev_block {
+                Block::Free => free_chunks.push((size, ptr - size)),
+                Block::File(_) => data_chunks.push((size, ptr - size)),
+            }
+            prev_block = &checksum[ptr];
+            size = 1;
         }
-        while left < right && checksum[right] == Block::Free {
-            right -= 1;
-        }
-
-        if left < right {
-            checksum[left] = checksum[right].clone();
-            checksum[right] = Block::Free;
-            left += 1;
-            right -= 1;
-        }
+        ptr += 1;
     }
-}
+    match prev_block {
+        Block::Free => free_chunks.push((size, ptr - size)),
+        Block::File(_) => data_chunks.push((size, ptr - size)),
+    }
 
-fn final_checksum(checksum: &Vec<Block>) -> u128 {
-    let mut res = 0;
-
-    for (index, block) in checksum.iter().enumerate() {
-        let val = match block {
-            Block::File(data) => data,
-            Block::Free => {
-                println!("We are at index({}) and found a Block::Free.", index);
+    data_chunks.reverse();
+    for (d_size, d_start) in &data_chunks {
+        for (f_size, f_start) in &mut free_chunks {
+            if d_start < f_start {
                 break;
             }
-        };
-
-        res += (index as u128) * (*val as u128);
+            if d_size <= f_size {
+                // Copy the data.
+                for i in 0..*d_size {
+                    checksum[*f_start + i] = checksum[*d_start + i].clone();
+                    checksum[*d_start + i] = Block::Free;
+                }
+                // Now we need to re arrange the free size.
+                *f_size -= d_size;
+                *f_start += d_size;
+                break;
+            }
+        }
     }
-    return res;
 }
 
-fn _display_checksum(checksum: &Vec<Block>) {
-    for block in checksum {
-        let val = match block {
-            Block::File(val) => &val.to_string(),
-            Block::Free => ".",
-        };
-        print!("{}", val);
-    }
-    println!()
+fn checksum_hash(checksum: &Vec<Block>) -> u128 {
+    checksum
+        .iter()
+        .enumerate()
+        .map(|(index, block)| {
+            let val = match block {
+                Block::File(data) => *data,
+                Block::Free => 0,
+            };
+            val as u128 * index as u128
+        })
+        .sum::<u128>()
 }
