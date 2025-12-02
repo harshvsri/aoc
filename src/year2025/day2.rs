@@ -14,7 +14,7 @@ fn is_repeating(id: &str) -> bool {
     })
 }
 
-pub fn foo() {
+pub fn solve() {
     let data =
         std::fs::read_to_string("input.txt").expect("test.txt should be present in the root.");
 

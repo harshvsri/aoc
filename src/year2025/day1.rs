@@ -1,4 +1,4 @@
-pub fn foo() {
+pub fn solve() {
     let data =
         std::fs::read_to_string("input.txt").expect("test.txt should be present in the root.");
 
@@ -27,7 +27,7 @@ pub fn foo() {
                 pos += rot_value;
                 if pos >= 100 {
                     res += (prev_pos != 0) as i16;
-                    pos %= 100;
+                    pos = pos.rem_euclid(100);
                 }
             }
             _ => unreachable!(),

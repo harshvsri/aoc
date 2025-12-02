@@ -1,4 +1,4 @@
-use crate::{lcm, read_input};
+use crate::lcm;
 use std::collections::HashMap;
 
 fn traverse_map(
@@ -30,7 +30,8 @@ fn traverse_map(
 }
 
 pub fn get_steps() {
-    let content = read_input();
+    let content = std::fs::read_to_string("test.txt")
+        .expect("input.txt must be present in the root of the directory.");
 
     let (instructions, map) = content
         .split_once("\n\n")
