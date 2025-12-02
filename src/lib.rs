@@ -11,6 +11,7 @@
 
 pub mod year2023;
 pub mod year2024;
+pub mod year2025;
 
 pub fn read_test() -> String {
     std::fs::read_to_string("test.txt")
