@@ -2,49 +2,74 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="${SCRIPT_DIR}/src"
 YEAR="${1:-$(date +%Y)}"
 DAY="${2:-$(date +%-d)}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+SRC_DIR="${SCRIPT_DIR}/src"
 YEAR_DIR="${SRC_DIR}/year${YEAR}"
-DAY_FILE="${YEAR_DIR}/day${DAY}.rs"
 MOD_FILE="${YEAR_DIR}/mod.rs"
+DAY_FILE="${YEAR_DIR}/day${DAY}.rs"
+LIB_FILE="${SRC_DIR}/lib.rs"
+MAIN_FILE="${SRC_DIR}/main.rs"
 PUZZLE_URL="https://adventofcode.com/${YEAR}/day/${DAY}"
 
 echo "=== AoC ${YEAR} Day ${DAY} ==="
 
+# Create year directory (mkdir -p is idempotent)
 mkdir -p "$YEAR_DIR"
-grep -q "pub mod year${YEAR};" "${SRC_DIR}/lib.rs" || echo "pub mod year${YEAR};" >> "${SRC_DIR}/lib.rs"
-[ -f "$MOD_FILE" ] || touch "$MOD_FILE"
-if [ ! -f "$DAY_FILE" ]; then
-    cat > "$DAY_FILE" << 'EOF'
-use std::fs;
 
-fn parse_input() -> String {
-    fs::read_to_string("input.txt")
-        .expect("input.txt should be present in the root directory.")
-}
-
-pub fn solve() {}
-EOF
-    echo "Created: ${DAY_FILE}"
+# Add year module to lib.rs if not present
+if ! grep -q "^pub mod year${YEAR};$" "$LIB_FILE" 2>/dev/null; then
+  echo "pub mod year${YEAR};" >>"$LIB_FILE"
+  echo "Added: year${YEAR} to lib.rs"
 fi
-grep -q "^pub mod day${DAY};$" "$MOD_FILE" || echo "pub mod day${DAY};" >> "$MOD_FILE"
+
+# Create mod.rs if not present
+if [ ! -f "$MOD_FILE" ]; then
+  touch "$MOD_FILE"
+  echo "Created: ${MOD_FILE}"
+fi
+
+# Add day module to mod.rs if not present
+if ! grep -q "^pub mod day${DAY};$" "$MOD_FILE" 2>/dev/null; then
+  echo "pub mod day${DAY};" >>"$MOD_FILE"
+  echo "Added: day${DAY} to mod.rs"
+fi
+
+# Create day file if not present
+if [ ! -f "$DAY_FILE" ]; then
+  cat >"$DAY_FILE" <<'EOF'
+pub fn solve() {
+    let data = std::fs::read_to_string("input.txt")
+        .expect("input.txt should be present in the root directory.");
+}
+EOF
+  echo "Created: ${DAY_FILE}"
+fi
+
+# Update main.rs
+cat >"$MAIN_FILE" <<EOF
+fn main() {
+    aoc::year${YEAR}::day${DAY}::solve();
+}
+EOF
+echo "Updated: ${MAIN_FILE}"
 
 # Fetch puzzle input
-curl -s -H "Cookie: session=${AOC_SESSION}" "${PUZZLE_URL}/input" > "${SCRIPT_DIR}/input.txt"
-echo "Fetched input: $(wc -l < "${SCRIPT_DIR}/input.txt") lines"
+curl -s -H "Cookie: session=${AOC_SESSION}" "${PUZZLE_URL}/input" >"${SCRIPT_DIR}/input.txt"
+echo "Fetched input: $(wc -l <"${SCRIPT_DIR}/input.txt") lines"
 
 # Fetch puzzle test input
-curl -s -H "Cookie: session=${AOC_SESSION}" "$PUZZLE_URL" | \
-    tr '\n' '\f' | \
-    grep -oP '<pre><code>[^<]*</code></pre>' | \
-    head -n 1 | \
-    sed 's/<pre><code>//; s/<\/code><\/pre>//' | \
-    tr '\f' '\n' | \
-    sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&#39;/'"'"'/g' | \
-    sed 's/[[:space:]]*$//' | \
-    sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > "${SCRIPT_DIR}/test.txt"
-echo "Fetched test: $(wc -l < "${SCRIPT_DIR}/test.txt") lines"
+curl -s -H "Cookie: session=${AOC_SESSION}" "$PUZZLE_URL" |
+  tr '\n' '\f' |
+  grep -oP '<pre><code>[^<]*</code></pre>' |
+  head -n 1 |
+  sed 's/<pre><code>//; s/<\/code><\/pre>//' |
+  tr '\f' '\n' |
+  sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&#39;/'"'"'/g' |
+  sed 's/[[:space:]]*$//' |
+  sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' >"${SCRIPT_DIR}/test.txt"
+echo "Fetched test: $(wc -l <"${SCRIPT_DIR}/test.txt") lines"
 
 echo "Ready! Edit: ${DAY_FILE}"
