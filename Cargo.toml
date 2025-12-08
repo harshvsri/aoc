@@ -3,6 +3,12 @@ name = "aoc"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+lto = "fat"
+panic = "abort"
+strip = true
+overflow-checks = true
+
 [dependencies]
 nalgebra = "0.34.1"
 once_cell = "1.21.3"
