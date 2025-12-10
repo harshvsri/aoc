@@ -41,8 +41,7 @@ fi
 if [ ! -f "$DAY_FILE" ]; then
   cat >"$DAY_FILE" <<'EOF'
 pub fn solve() {
-    let data = std::fs::read_to_string("test.txt")
-        .expect("File should be present in the root directory.");
+    let data = std::fs::read_to_string("test.txt").expect("File must be present in the root directory.");
 }
 EOF
   echo "Created: ${DAY_FILE}"
