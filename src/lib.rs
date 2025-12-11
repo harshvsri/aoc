@@ -29,3 +29,20 @@ pub fn lcm(a: u64, b: u64) -> u64 {
     }
     (a / gcd(a, b)) * b
 }
+
+pub fn permutation(p: &mut [char], index: usize) {
+    fn swap(p: &mut [char], x: usize, y: usize) {
+        let temp = p[x];
+        p[x] = p[y];
+        p[y] = temp;
+    }
+
+    if index == p.len() {
+        println!("{:?}", p);
+    }
+    for i in index..p.len() {
+        swap(p, i, index);
+        permutation(p, index + 1);
+        swap(p, i, index);
+    }
+}
