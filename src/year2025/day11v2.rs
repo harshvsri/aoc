@@ -1,9 +1,10 @@
+use crate::year2025::day11::dfs;
 use std::collections::{HashMap, HashSet};
 
 // WARN: I have a very strong feeling that the cache and the visited are conflicting.
 // There is something about this usage that just doesnt feels right.
 
-fn dfs<'a>(
+pub fn adv_dfs<'a>(
     node: &'a str,
     target: &'a str,
     flags: [bool; 2],
@@ -25,9 +26,9 @@ fn dfs<'a>(
     if let Some(connections) = graph.get(node) {
         for conn in connections {
             count += match *conn {
-                "dac" => dfs(conn, target, [true, flags[1]], graph, cache, visited),
-                "fft" => dfs(conn, target, [flags[0], true], graph, cache, visited),
-                _ => dfs(conn, target, flags, graph, cache, visited),
+                "dac" => adv_dfs(conn, target, [true, flags[1]], graph, cache, visited),
+                "fft" => adv_dfs(conn, target, [flags[0], true], graph, cache, visited),
+                _ => adv_dfs(conn, target, flags, graph, cache, visited),
             };
         }
     }
@@ -48,7 +49,7 @@ fn dfs<'a>(
 
 pub fn solve() {
     let data =
-        std::fs::read_to_string("input.txt").expect("File must be present in the root directory.");
+        std::fs::read_to_string("test.txt").expect("File must be present in the root directory.");
 
     let graph = data
         .lines()
@@ -59,13 +60,17 @@ pub fn solve() {
         })
         .collect::<HashMap<_, _>>();
 
-    let res = dfs(
-        "svr",
-        "out",
-        [false; 2],
-        &graph,
-        &mut HashMap::new(),
-        &mut HashSet::new(),
-    );
-    println!("Res: {res:?}");
+    let res = dfs("svr", "out", &graph, &mut HashMap::new());
+    println!("Res: {res}");
+
+    let mut cache = HashMap::new();
+    let left = dfs("svr", "dac", &graph, &mut cache)
+        * dfs("dac", "fft", &graph, &mut cache)
+        * dfs("fft", "out", &graph, &mut cache);
+
+    let right = dfs("svr", "fft", &graph, &mut HashMap::new())
+        * dfs("fft", "dac", &graph, &mut HashMap::new())
+        * dfs("dac", "out", &graph, &mut HashMap::new());
+
+    println!("Res[{},{}]: {}", left, right, left + right);
 }

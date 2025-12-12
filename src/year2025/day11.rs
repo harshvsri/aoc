@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-fn dfs<'a>(
+pub fn dfs<'a>(
     node: &'a str,
     target: &'a str,
     graph: &HashMap<&'a str, Vec<&'a str>>,
