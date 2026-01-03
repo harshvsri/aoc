@@ -3,7 +3,7 @@ use std::{
     collections::{BinaryHeap, HashMap},
 };
 
-#[derive(Debug, Hash, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord)]
 enum Dir {
     NORTH,
     SOUTH,
@@ -33,15 +33,16 @@ fn get_pos(map: &Vec<Vec<char>>, c: char) -> Option<(isize, isize)> {
     return None;
 }
 
+#[allow(dead_code)]
 fn make_path(
-    prev_map: &HashMap<(isize, isize), Vec<(isize, isize)>>,
-    node: &(isize, isize),
-    path: &mut Vec<(isize, isize)>,
+    prev_map: &HashMap<((isize, isize), Dir), Vec<((isize, isize), Dir)>>,
+    node: ((isize, isize), Dir),
+    path: &mut Vec<((isize, isize), Dir)>,
 ) {
-    if let Some(ps) = prev_map.get(node) {
+    if let Some(ps) = prev_map.get(&node) {
         for &p in ps {
-            path.push(p);
-            make_path(prev_map, &p, path);
+            path.push(p.clone());
+            make_path(prev_map, p, path);
             path.pop();
         }
     } else {
@@ -64,18 +65,18 @@ pub fn solve() {
 
     let start = get_pos(&map, 'S').unwrap();
     let end = get_pos(&map, 'E').unwrap();
-    let mut pq = BinaryHeap::from([(Reverse(0), start, &Dir::EAST)]);
-    let mut score_map = HashMap::from([(start, 0)]);
+    let mut pq = BinaryHeap::from([(Reverse(0), start, Dir::EAST)]);
+    let mut score_map = HashMap::from([((start, Dir::EAST), 0)]);
     let mut prev_map = HashMap::new();
 
     while !pq.is_empty() {
         let (score, (x, y), direction) = pq.pop().unwrap();
         if (x, y) == end {
             println!("Min score: {}.", score.0);
-            break;
+            // break;
         }
 
-        for dir in DIRS {
+        for &dir in DIRS {
             let (dx, dy) = dir.to_coords();
             let (nx, ny) = (x + dx, y + dy);
 
@@ -87,20 +88,23 @@ pub fn solve() {
             }
 
             let nscore = score.0 + if dir == direction { 1 } else { 1001 };
-            match score_map.get_mut(&(nx, ny)) {
+            match score_map.get_mut(&((nx, ny), dir)) {
                 None => {
-                    score_map.insert((nx, ny), nscore);
-                    prev_map.insert((nx, ny), vec![(x, y)]);
+                    score_map.insert(((nx, ny), dir), nscore);
+                    prev_map.insert(((nx, ny), dir), vec![((x, y), direction)]);
                     pq.push((Reverse(nscore), (nx, ny), dir));
                 }
                 Some(score) => {
                     if nscore == *score {
-                        prev_map.entry((nx, ny)).or_insert(vec![]).push((x, y));
+                        prev_map
+                            .entry(((nx, ny), dir))
+                            .or_insert(vec![])
+                            .push(((x, y), direction));
                         pq.push((Reverse(nscore), (nx, ny), dir));
                     }
                     if nscore < *score {
                         *score = nscore;
-                        prev_map.insert((nx, ny), vec![(x, y)]);
+                        prev_map.insert(((nx, ny), dir), vec![((x, y), direction)]);
                         pq.push((Reverse(nscore), (nx, ny), dir));
                     }
                 }
@@ -108,5 +112,17 @@ pub fn solve() {
         }
     }
 
-    make_path(&prev_map, &end, &mut vec![end]);
+    let _min_score = DIRS
+        .iter()
+        .map(|&dir| score_map.get(&(end, dir)).unwrap_or(&i32::MAX))
+        .min()
+        .unwrap();
+
+    // for &dir in DIRS {
+    //     if let Some(x) = score_map.get(&(end, dir))
+    //         && x == min_score
+    //     {
+    //         make_path(&prev_map, (end, dir), &mut vec![(end, dir)]);
+    //     }
+    // }
 }
