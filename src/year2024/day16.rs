@@ -35,7 +35,7 @@ fn get_start(map: &Vec<Vec<char>>) -> Option<(isize, isize)> {
 
 const DIRS: &[Dir] = &[Dir::NORTH, Dir::EAST, Dir::SOUTH, Dir::WEST];
 
-pub fn get_lowest_score() {
+pub fn solve() {
     let map = std::fs::read_to_string("input.txt")
         .expect("input.txt should be present in the root directory.");
 

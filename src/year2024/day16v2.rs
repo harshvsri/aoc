@@ -3,8 +3,10 @@ use std::{
     collections::{BinaryHeap, HashMap},
 };
 
+use once_cell::sync::OnceCell;
+
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord)]
-enum Dir {
+pub enum Dir {
     NORTH,
     SOUTH,
     EAST,
@@ -20,6 +22,15 @@ impl Dir {
             Dir::WEST => (0, -1),
         }
     }
+
+    fn valid_dirs(&self) -> [Self; 3] {
+        match self {
+            Dir::NORTH => [Dir::NORTH, Dir::EAST, Dir::WEST],
+            Dir::SOUTH => [Dir::EAST, Dir::SOUTH, Dir::WEST],
+            Dir::EAST => [Dir::NORTH, Dir::EAST, Dir::SOUTH],
+            Dir::WEST => [Dir::NORTH, Dir::SOUTH, Dir::WEST],
+        }
+    }
 }
 
 fn get_pos(map: &Vec<Vec<char>>, c: char) -> Option<(isize, isize)> {
@@ -33,8 +44,7 @@ fn get_pos(map: &Vec<Vec<char>>, c: char) -> Option<(isize, isize)> {
     return None;
 }
 
-#[allow(dead_code)]
-fn make_path(
+pub fn make_path(
     prev_map: &HashMap<((isize, isize), Dir), Vec<((isize, isize), Dir)>>,
     node: ((isize, isize), Dir),
     path: &mut Vec<((isize, isize), Dir)>,
@@ -47,12 +57,14 @@ fn make_path(
         }
     } else {
         // We have reached to the start
-        println!("Path[{}]: {:?}", path.len(), path.clone());
+        // println!("Path[{}]: {:?}", path.len(), path.iter().rev().clone());
+        println!("Path[{}]: [...]", path.len());
         return;
     }
 }
 
 const DIRS: &[Dir] = &[Dir::NORTH, Dir::EAST, Dir::SOUTH, Dir::WEST];
+static MIN_SCORE: OnceCell<i32> = OnceCell::new();
 
 pub fn solve() {
     let map = std::fs::read_to_string("test.txt")
@@ -72,11 +84,21 @@ pub fn solve() {
     while !pq.is_empty() {
         let (score, (x, y), direction) = pq.pop().unwrap();
         if (x, y) == end {
-            println!("Min score: {}.", score.0);
+            MIN_SCORE.get_or_init(|| score.0);
+            println!("...");
+            // make_path(&prev_map, (end, direction), &mut vec![(end, direction)]);
+
+            // println!(
+            //     "{:?}",
+            //     prev_map
+            //         .values()
+            //         .map(|v: &Vec<((isize, isize), Dir)>| v.len())
+            //         .sum::<usize>()
+            // );
             // break;
         }
 
-        for &dir in DIRS {
+        for dir in direction.valid_dirs() {
             let (dx, dy) = dir.to_coords();
             let (nx, ny) = (x + dx, y + dy);
 
@@ -88,6 +110,12 @@ pub fn solve() {
             }
 
             let nscore = score.0 + if dir == direction { 1 } else { 1001 };
+            if let Some(&min_score) = MIN_SCORE.get()
+                && nscore > min_score
+            {
+                continue;
+            }
+
             match score_map.get_mut(&((nx, ny), dir)) {
                 None => {
                     score_map.insert(((nx, ny), dir), nscore);
