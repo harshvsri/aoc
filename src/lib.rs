@@ -46,3 +46,16 @@ pub fn permutation(p: &mut [char], index: usize) {
         swap(p, i, index);
     }
 }
+
+pub fn permute(chars: &mut [char], start: usize, results: &mut std::collections::HashSet<String>) {
+    if start == chars.len() {
+        results.insert(chars.iter().collect());
+        return;
+    }
+
+    for i in start..chars.len() {
+        chars.swap(start, i);
+        permute(chars, start + 1, results);
+        chars.swap(start, i);
+    }
+}

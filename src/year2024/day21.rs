@@ -1,38 +1,39 @@
 use std::collections::HashMap;
-
+type Pos = (isize, isize);
 const NUMPAD_GRID: [[char; 3]; 4] = [
     ['7', '8', '9'],
     ['4', '5', '6'],
     ['1', '2', '3'],
     [' ', '0', 'A'],
 ];
-
 const ARROW_GRID: [[char; 3]; 2] = [[' ', '^', 'A'], ['<', 'v', '>']];
 
-fn get_path(from: &(isize, isize), to: &(isize, isize), invalid_pos: &(isize, isize)) -> String {
+// This fn doesnt handle the invalid case ie position that can cause panic the robot.
+// Maybe this fn should also accept the invalid position so that we can validate all the paths.
+pub fn get_valid_paths(from: &Pos, to: &Pos, invalid: &Pos) -> [Option<String>; 2] {
     let (dx, dy) = (to.0 - from.0, to.1 - from.1);
 
     let horizontal = match dy.cmp(&0) {
-        std::cmp::Ordering::Greater => ">".repeat(dy as usize),
-        std::cmp::Ordering::Less => "<".repeat(dy.abs() as usize),
-        std::cmp::Ordering::Equal => String::new(),
+        std::cmp::Ordering::Greater => &">".repeat(dy as usize),
+        std::cmp::Ordering::Less => &"<".repeat(dy.abs() as usize),
+        std::cmp::Ordering::Equal => "",
     };
-
     let vertical = match dx.cmp(&0) {
-        std::cmp::Ordering::Greater => "v".repeat(dx as usize),
-        std::cmp::Ordering::Less => "^".repeat(dx.abs() as usize),
-        std::cmp::Ordering::Equal => String::new(),
+        std::cmp::Ordering::Greater => &"v".repeat(dx as usize),
+        std::cmp::Ordering::Less => &"^".repeat(dx.abs() as usize),
+        std::cmp::Ordering::Equal => "",
     };
 
-    if &(from.0 + dx, from.1) == invalid_pos {
-        format!("{}{}A", horizontal, vertical)
-    } else if &(from.0, from.1 + dy) == invalid_pos {
-        format!("{}{}A", vertical, horizontal)
-    } else {
-        // Now we need to find out which one is more optimal.
-        // format!("{}{}A", horizontal, vertical);
-        // format!("{}{}A", vertical, horizontal);
-        todo!()
+    let verticalal_blocked = &(from.0 + dx, from.1) == invalid;
+    let horizontal_blocked = &(from.0, from.1 + dy) == invalid;
+    match (verticalal_blocked, horizontal_blocked) {
+        (true, false) => [None, Some(String::from_iter([horizontal, vertical]))],
+        (false, true) => [Some(String::from_iter([vertical, horizontal])), None],
+        (false, false) => [
+            Some(String::from_iter([vertical, horizontal])),
+            Some(String::from_iter([horizontal, vertical])),
+        ],
+        (true, true) => panic!("There must be at least one valid path."),
     }
 }
 
@@ -58,19 +59,24 @@ impl KeypadSequence for String {
         let invalid_pos = map.get(&' ').unwrap();
         let mut result = String::new();
 
+        // We can have multiple path options and we need to consider every path since we have no
+        // idea which might be the most efficient.
         for ch in self.chars() {
             if let Some(target_pos) = map.get(&ch) {
-                result.push_str(&get_path(current_pos, target_pos, invalid_pos));
+                // We must account for the invalid paths since that may exponentially shoot up the total possibilities.
+                // Right now this returns a random path, just for testing purposes.
+                let [_a, _b] = get_valid_paths(current_pos, target_pos, invalid_pos);
+                result.push('A');
                 current_pos = target_pos;
             }
         }
 
-        result
+        dbg!(result)
     }
 }
 
 pub fn foo() {
-    let sequences = std::fs::read_to_string("input.txt")
+    let sequences = std::fs::read_to_string("test.txt")
         .expect("input.txt must be present in the root of the directory.")
         .lines()
         .map(|line| line.to_string())
@@ -85,7 +91,7 @@ pub fn foo() {
             ));
 
             let seq_len = sequence
-                .clone()
+                .to_string()
                 .get_seq(&NUMPAD_GRID)
                 .get_seq(&ARROW_GRID)
                 .get_seq(&ARROW_GRID)

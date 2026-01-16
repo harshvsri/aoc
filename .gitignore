@@ -1,3 +1,4 @@
+/.cargo
 /target
 src/main.rs
 *.txt
