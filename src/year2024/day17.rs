@@ -5,6 +5,7 @@ struct Computer {
     reg_c: usize,
     instuction_ptr: usize,
     program: Vec<usize>,
+    result: Vec<usize>,
 }
 
 impl Computer {
@@ -37,11 +38,12 @@ impl Computer {
                 .split(",")
                 .map(|op| op.parse::<usize>().expect("op must be a valid number."))
                 .collect::<Vec<_>>(),
+            result: Vec::new(),
         }
     }
 
-    fn compute(&mut self) -> String {
-        let mut res = Vec::new();
+    fn compute(&mut self) {
+        // let mut res = Vec::new();
         loop {
             if self.instuction_ptr >= self.program.len() - 1 {
                 break;
@@ -52,13 +54,14 @@ impl Computer {
                 self.program[self.instuction_ptr + 1],
             );
             if let Some(val) = self.perform_operation(opcode, operand) {
-                res.push(val.to_string());
+                self.result.push(val);
+                // res.push(val.to_string());
             }
             if opcode != 3 || (opcode == 3 && self.reg_a == 0) {
                 self.instuction_ptr += 2;
             }
         }
-        res.join(",")
+        // res.join(",")
     }
 
     fn get_combo(&self, operand: usize) -> usize {
@@ -112,13 +115,6 @@ impl Computer {
     }
 
     fn fix_register(&mut self) {
-        let target = self
-            .program
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>()
-            .join(",");
-
         let mut reg = 1;
         loop {
             if reg % 1000_000 == 0 {
@@ -126,8 +122,10 @@ impl Computer {
             }
             self.reg_a = reg;
             self.instuction_ptr = 0;
+            self.result.clear();
+            self.compute();
 
-            if self.compute() == target {
+            if self.result == self.program {
                 println!("Match found at {reg}");
                 break;
             }
