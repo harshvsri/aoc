@@ -71,4 +71,3 @@ pub fn solve() {
     cpu.operate(ops);
     println!("Result: {}", cpu.res);
 }
-
