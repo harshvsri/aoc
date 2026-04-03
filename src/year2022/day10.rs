@@ -63,6 +63,7 @@ impl Operation {
     }
 }
 
+pub const SPRITE: [char; 3] = ['#'; 3];
 pub fn solve() {
     let data = std::fs::read_to_string("input.txt").expect("Must be a valid path.");
     let ops = data.lines().map(Operation::parse).collect::<Vec<_>>();
@@ -71,4 +72,3 @@ pub fn solve() {
     cpu.operate(ops);
     println!("Result: {}", cpu.res);
 }
-
