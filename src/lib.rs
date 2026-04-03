@@ -7,6 +7,7 @@
 // - A central `mod.rs` inside the `yearXXXX` folder declares and organizes all these modules.
 // - This structure ensures that `lib.rs` remains concise and simply exposes the top-level module.
 
+pub mod year2022;
 pub mod year2023;
 pub mod year2024;
 pub mod year2025;
