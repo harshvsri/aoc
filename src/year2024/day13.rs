@@ -63,9 +63,5 @@ fn solve_linear_equations(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64) -> Opt
     let (x, y) = (x as i64, y as i64);
 
     println!("We might have a solution ({x}, {y})");
-    if x < 0 || y < 0 {
-        None
-    } else {
-        Some((x, y))
-    }
+    if x < 0 || y < 0 { None } else { Some((x, y)) }
 }

@@ -1,7 +1,7 @@
 use std::{
     cmp::{max, min},
     collections::{HashMap, HashSet, VecDeque},
-    io::{stdout, Write},
+    io::{Write, stdout},
     usize,
 };
 
