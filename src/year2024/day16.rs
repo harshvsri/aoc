@@ -44,8 +44,10 @@ pub fn solve() {
         .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
 
-    let mut pq = BinaryHeap::from([(Reverse(0), get_start(&map).unwrap(), &Dir::EAST)]);
-    let mut visited = HashSet::new();
+    let start_pos = get_start(&map).unwrap();
+    let start_dir = Dir::EAST;
+    let mut pq = BinaryHeap::from([(Reverse(0), start_pos, &start_dir)]);
+    let mut visited = HashSet::from([(start_pos, &start_dir)]);
 
     while !pq.is_empty() {
         let (score, (x, y), direction) = pq.pop().unwrap();
@@ -53,11 +55,6 @@ pub fn solve() {
             println!("Min score: {}.", score.0);
             break;
         }
-
-        if visited.contains(&((x, y), direction)) {
-            continue;
-        }
-        visited.insert(((x, y), direction));
 
         for dir in DIRS {
             let (dx, dy) = dir.to_coords();
@@ -67,6 +64,9 @@ pub fn solve() {
                 continue;
             }
             if map[nx as usize][ny as usize] == '#' {
+                continue;
+            }
+            if !visited.insert(((nx, ny), dir)) {
                 continue;
             }
 
