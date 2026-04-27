@@ -1,9 +1,11 @@
+use once_cell::sync::OnceCell;
 use std::{
     cmp::Reverse,
-    collections::{BinaryHeap, HashMap},
+    collections::{BinaryHeap, HashMap, HashSet},
 };
 
-use once_cell::sync::OnceCell;
+static MIN_SCORE: OnceCell<i32> = OnceCell::new();
+const DIRS: &[Dir] = &[Dir::NORTH, Dir::EAST, Dir::SOUTH, Dir::WEST];
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, PartialOrd, Ord)]
 pub enum Dir {
@@ -44,30 +46,42 @@ fn get_pos(map: &Vec<Vec<char>>, c: char) -> Option<(isize, isize)> {
     return None;
 }
 
-pub fn make_path(
+fn tile_count(
+    end: (isize, isize),
+    score_map: &HashMap<((isize, isize), Dir), i32>,
     prev_map: &HashMap<((isize, isize), Dir), Vec<((isize, isize), Dir)>>,
-    node: ((isize, isize), Dir),
-    path: &mut Vec<((isize, isize), Dir)>,
-) {
-    if let Some(ps) = prev_map.get(&node) {
-        for &p in ps {
-            path.push(p.clone());
-            make_path(prev_map, p, path);
-            path.pop();
+) -> usize {
+    let mut q = Vec::new();
+    let mut visited = HashSet::new();
+
+    for &dir in DIRS {
+        if let Some(&score) = score_map.get(&(end, dir))
+            && &score == MIN_SCORE.get().expect("We never reached to the end node.")
+        {
+            q.push((end, dir));
+            visited.insert((end, dir));
         }
-    } else {
-        // We have reached to the start
-        // println!("Path[{}]: {:?}", path.len(), path.iter().rev().clone());
-        println!("Path[{}]: [...]", path.len());
-        return;
     }
+
+    while let Some(state) = q.pop() {
+        if let Some(prevs) = prev_map.get(&state) {
+            for &prev_state in prevs {
+                if visited.insert(prev_state) {
+                    q.push(prev_state);
+                }
+            }
+        }
+    }
+
+    visited
+        .iter()
+        .map(|(pos, _)| pos)
+        .collect::<HashSet<_>>()
+        .len()
 }
 
-const DIRS: &[Dir] = &[Dir::NORTH, Dir::EAST, Dir::SOUTH, Dir::WEST];
-static MIN_SCORE: OnceCell<i32> = OnceCell::new();
-
 pub fn solve() {
-    let map = std::fs::read_to_string("test.txt")
+    let map = std::fs::read_to_string("input.txt")
         .expect("input.txt should be present in the root directory.");
 
     let map = map
@@ -81,21 +95,9 @@ pub fn solve() {
     let mut score_map = HashMap::from([((start, Dir::EAST), 0)]);
     let mut prev_map = HashMap::new();
 
-    while !pq.is_empty() {
-        let (score, (x, y), direction) = pq.pop().unwrap();
+    while let Some((score, (x, y), direction)) = pq.pop() {
         if (x, y) == end {
             MIN_SCORE.get_or_init(|| score.0);
-            println!("...");
-            // make_path(&prev_map, (end, direction), &mut vec![(end, direction)]);
-
-            // println!(
-            //     "{:?}",
-            //     prev_map
-            //         .values()
-            //         .map(|v: &Vec<((isize, isize), Dir)>| v.len())
-            //         .sum::<usize>()
-            // );
-            // break;
         }
 
         for dir in direction.valid_dirs() {
@@ -110,47 +112,36 @@ pub fn solve() {
             }
 
             let nscore = score.0 + if dir == direction { 1 } else { 1001 };
-            if let Some(&min_score) = MIN_SCORE.get()
-                && nscore > min_score
-            {
-                continue;
-            }
-
             match score_map.get_mut(&((nx, ny), dir)) {
                 None => {
                     score_map.insert(((nx, ny), dir), nscore);
                     prev_map.insert(((nx, ny), dir), vec![((x, y), direction)]);
                     pq.push((Reverse(nscore), (nx, ny), dir));
                 }
-                Some(score) => {
-                    if nscore == *score {
-                        prev_map
-                            .entry(((nx, ny), dir))
-                            .or_insert(vec![])
-                            .push(((x, y), direction));
-                        pq.push((Reverse(nscore), (nx, ny), dir));
-                    }
-                    if nscore < *score {
-                        *score = nscore;
-                        prev_map.insert(((nx, ny), dir), vec![((x, y), direction)]);
-                        pq.push((Reverse(nscore), (nx, ny), dir));
+
+                Some(best_nscore) => {
+                    match nscore.cmp(best_nscore) {
+                        std::cmp::Ordering::Greater => continue,
+                        std::cmp::Ordering::Less => {
+                            *best_nscore = nscore;
+                            prev_map.insert(((nx, ny), dir), vec![((x, y), direction)]);
+                            pq.push((Reverse(nscore), (nx, ny), dir));
+                        }
+                        std::cmp::Ordering::Equal => {
+                            prev_map
+                                .entry(((nx, ny), dir))
+                                .or_default()
+                                .push(((x, y), direction));
+                            // Intentionally not pushing to pq again to avoid duplicate work
+                        }
                     }
                 }
             }
         }
     }
 
-    let _min_score = DIRS
-        .iter()
-        .map(|&dir| score_map.get(&(end, dir)).unwrap_or(&i32::MAX))
-        .min()
-        .unwrap();
-
-    // for &dir in DIRS {
-    //     if let Some(x) = score_map.get(&(end, dir))
-    //         && x == min_score
-    //     {
-    //         make_path(&prev_map, (end, dir), &mut vec![(end, dir)]);
-    //     }
-    // }
+    println!(
+        "Unique Tiles in Best Paths: {}",
+        tile_count(end, &score_map, &prev_map)
+    );
 }
