@@ -43,7 +43,6 @@ impl Computer {
     }
 
     fn compute(&mut self) {
-        // let mut res = Vec::new();
         loop {
             if self.instuction_ptr >= self.program.len() - 1 {
                 break;
@@ -55,13 +54,11 @@ impl Computer {
             );
             if let Some(val) = self.perform_operation(opcode, operand) {
                 self.result.push(val);
-                // res.push(val.to_string());
             }
             if opcode != 3 || (opcode == 3 && self.reg_a == 0) {
                 self.instuction_ptr += 2;
             }
         }
-        // res.join(",")
     }
 
     fn get_combo(&self, operand: usize) -> usize {
@@ -114,29 +111,44 @@ impl Computer {
         }
     }
 
-    fn fix_register(&mut self) {
-        let mut reg = 1;
-        loop {
-            if reg % 1000_000 == 0 {
-                println!("Trying {reg}.");
-            }
-            self.reg_a = reg;
-            self.instuction_ptr = 0;
-            self.result.clear();
+    fn reset(&mut self) {
+        self.reg_a = 1;
+        self.reg_b = 0;
+        self.reg_c = 0;
+        self.instuction_ptr = 0;
+        self.result.clear();
+    }
+
+    fn find_initial_value(&mut self, current_a: usize, depth: usize) -> Option<usize> {
+        if depth == self.program.len() {
+            return Some(current_a);
+        }
+
+        for i in 0..8 {
+            self.reset();
+            // Shift current A left by 3 bits (multiply by 8) and add the current guess `i`.
+            let next_a = (current_a << 3) | i;
+            self.reg_a = next_a;
             self.compute();
 
-            if self.result == self.program {
-                println!("Match found at {reg}");
-                break;
+            if self.result == &self.program[(self.program.len() - 1 - depth)..] {
+                if let Some(ans) = self.find_initial_value(next_a, depth + 1) {
+                    return Some(ans);
+                }
             }
-            reg += 1;
         }
+
+        None
     }
 }
 
-pub fn foo() {
+pub fn solve() {
     let content = std::fs::read_to_string("input.txt")
         .expect("input.txt should be present in the root directory.");
 
-    Computer::new(&content).fix_register();
+    let mut computer = Computer::new(&content);
+    let initial_value = computer
+        .find_initial_value(0, 0)
+        .expect("No value found for register.");
+    println!("{initial_value}");
 }
