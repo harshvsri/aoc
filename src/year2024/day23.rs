@@ -1,29 +1,41 @@
 use std::collections::{HashMap, HashSet};
 
-static INPUT: &str = include_str!("../../input.txt");
+pub fn solve() {
+    let content = std::fs::read_to_string("input.txt")
+        .expect("input.txt must be present in the root of the directory.");
 
-pub fn foo() {
     let mut connections = HashMap::new();
-
-    for line in INPUT.lines() {
+    content.lines().for_each(|line| {
         let (k, v) = line
             .split_once('-')
             .expect("Each line must contain a '-' separator.");
 
-        connections.entry(k).or_insert_with(Vec::new).push(v);
-        connections.entry(v).or_insert_with(Vec::new).push(k);
-    }
+        connections.entry(k).or_insert(Vec::new()).push(v);
+        connections.entry(v).or_insert(Vec::new()).push(k);
+    });
 
-    let computers = find_triangles(&connections)
-        .into_iter()
+    let tripods = find_tripods(&connections)
+        .iter()
         .filter(|c| [0, 3, 6].iter().any(|&i| c.chars().nth(i).unwrap() == 't'))
-        .collect::<Vec<_>>();
-    println!("{:?}", computers.len());
+        .count();
+    println!("{:?}", tripods);
+
+    interconnections(&connections);
 }
 
-pub fn find_triangles(connections: &HashMap<&'static str, Vec<&'static str>>) -> Vec<String> {
+pub fn find_tripods<'a>(connections: &HashMap<&'a str, Vec<&'a str>>) -> Vec<String> {
+    fn is_connected<'a>(
+        connections: &HashMap<&'a str, Vec<&'a str>>,
+        from: &str,
+        to: &str,
+    ) -> bool {
+        connections
+            .get(from)
+            .map_or(false, |neighbors| neighbors.contains(&to))
+    }
+
     let mut triangles = Vec::new();
-    let nodes = connections.keys().copied().collect::<Vec<_>>();
+    let nodes = connections.keys().collect::<Vec<_>>();
 
     for i in 0..nodes.len() {
         for j in (i + 1)..nodes.len() {
@@ -39,49 +51,56 @@ pub fn find_triangles(connections: &HashMap<&'static str, Vec<&'static str>>) ->
             }
         }
     }
-
     triangles
 }
 
-fn is_connected(
-    connections: &HashMap<&'static str, Vec<&'static str>>,
-    from: &str,
-    to: &str,
-) -> bool {
-    connections
-        .get(from)
-        .map_or(false, |neighbors| neighbors.contains(&to))
+// INFO: We need to find the largest group where every node is connected to every other node.
+// In graph theory, a fully connected subgraph is called a "Clique", and we are looking for the Maximum Clique.
+// This makes this problem significantly different from the largest island (connected component) problem.
+pub fn interconnections<'a>(connections: &HashMap<&'a str, Vec<&'a str>>) {
+    let mut curr_clique = HashSet::new();
+    let mut max_clique = HashSet::new();
+    let mut candidates = connections.keys().copied().collect();
+
+    find_cliques(
+        &mut curr_clique,
+        &mut max_clique,
+        &mut candidates,
+        connections,
+    );
+
+    let mut result: Vec<&str> = max_clique.into_iter().collect();
+    result.sort_unstable();
+    println!("{}", result.join(","));
 }
 
-pub fn interconnections(connections: &HashMap<&'static str, Vec<&'static str>>) {
-    let mut visited = HashSet::new();
-    for &k in connections.keys() {
-        let groups = traverse(&connections, &mut visited, k, 0);
-        println!("{:?}", groups);
-    }
-}
-
-pub fn traverse(
-    connections: &HashMap<&'static str, Vec<&'static str>>,
-    visited: &mut HashSet<&'static str>,
-    curr: &str,
-    depth: u8,
-) -> Vec<String> {
-    if depth == 2 {
-        return vec![curr.to_string()];
-    }
-
-    let mut res = vec![];
-    if let Some(conn) = connections.get(curr) {
-        for &c in conn {
-            if visited.insert(c) {
-                res.extend(traverse(connections, visited, c, depth + 1));
-            }
+pub fn find_cliques<'a>(
+    curr_clique: &mut HashSet<&'a str>,
+    max_clique: &mut HashSet<&'a str>,
+    candidates: &mut HashSet<&'a str>,
+    connections: &HashMap<&'a str, Vec<&'a str>>,
+) {
+    if candidates.is_empty() {
+        if curr_clique.len() > max_clique.len() {
+            *max_clique = curr_clique.clone();
         }
+        return;
     }
 
-    for val in &mut res {
-        val.insert_str(0, &format!("{curr}-"));
+    // Clone the candidates so we can safely iterate over them while modifying the original set.
+    let candidates_clone = candidates.clone();
+    for node in candidates_clone {
+        curr_clique.insert(node);
+
+        let neighbors = if let Some(n) = connections.get(node) {
+            n.iter().copied().collect()
+        } else {
+            HashSet::new()
+        };
+        let mut next_candidates = candidates.intersection(&neighbors).copied().collect();
+        find_cliques(curr_clique, max_clique, &mut next_candidates, connections);
+
+        curr_clique.remove(node);
+        candidates.remove(node);
     }
-    return res;
 }
