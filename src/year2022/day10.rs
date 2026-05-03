@@ -20,22 +20,32 @@ impl CPU {
         (cycle - 20) % 40 == 0
     }
 
-    fn tick(&mut self) {
+    fn tick(&mut self, crt: &mut Vec<Vec<char>>) {
+        let row = (self.cycle_count / 40) as usize;
+        let col = (self.cycle_count % 40) as usize;
+
+        // If the CRT's drawing column (col) falls within the sprite's bounds (X-1, X, X+1),
+        if (col as i32 - self.register).abs() <= 1 {
+            if row < crt.len() && col < crt[0].len() {
+                crt[row][col] = '#';
+            }
+        }
+
         self.cycle_count += 1;
         if Self::valid_cycle(self.cycle_count) {
-            self.res += self.cycle_count * self.register
+            self.res += self.cycle_count * self.register;
         }
     }
 
-    fn operate(&mut self, ops: Vec<Operation>) {
+    fn operate(&mut self, ops: Vec<Operation>, crt: &mut Vec<Vec<char>>) {
         for op in ops {
             match op {
                 Operation::Noop => {
-                    self.tick();
+                    self.tick(crt);
                 }
                 Operation::Addx(val) => {
-                    self.tick();
-                    self.tick();
+                    self.tick(crt);
+                    self.tick(crt);
                     self.register += val;
                 }
             }
@@ -69,6 +79,11 @@ pub fn solve() {
     let ops = data.lines().map(Operation::parse).collect::<Vec<_>>();
 
     let mut cpu = CPU::new();
-    cpu.operate(ops);
+    let mut crt = vec![vec!['.'; 40]; 6];
+    cpu.operate(ops, &mut crt);
     println!("Result: {}", cpu.res);
+
+    for row in crt {
+        println!("{}", row.iter().collect::<String>());
+    }
 }
