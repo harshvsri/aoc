@@ -1,4 +1,4 @@
-use crate::lcm;
+use crate::utils::lcm;
 use std::collections::HashMap;
 
 fn traverse_map(

@@ -2,11 +2,14 @@
 name = "aoc"
 version = "0.1.0"
 edition = "2024"
+authors = ["Harsh V Srivastava <harshvsri@gamil.com>"]
+description = "Advent of Code solutions"
+keywords = ["aoc", "puzzles", "algorithms", "mathematics"]
 
 [profile.release]
-# lto = "fat"
 debug = true
 panic = "abort"
+# lto = "fat"
 # strip = true
 # overflow-checks = true
 
