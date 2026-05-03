@@ -1,5 +1,5 @@
 const PIN_SIZE: usize = 5;
-pub fn foo() {
+pub fn solve() {
     let (mut locks, mut keys) = (Vec::new(), Vec::new());
 
     std::fs::read_to_string("input.txt")
@@ -32,5 +32,5 @@ pub fn foo() {
             valid_pairs += lock.iter().zip(key).all(|(l, k)| l + k <= PIN_SIZE as u8) as usize;
         }
     }
-    println!("Found {valid_pairs} valid k-v pair.");
+    println!("Found {valid_pairs} valid key-lock pairs.");
 }
