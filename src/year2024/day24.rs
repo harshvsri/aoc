@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Clone)]
 struct Operation<'a> {
     a: &'a str,
     b: &'a str,
@@ -44,7 +45,7 @@ pub fn solve() {
         })
         .collect::<HashMap<_, _>>();
 
-    let mut operations = operations
+    let operations = operations
         .lines()
         .map(|line| {
             let (values, res) = line
@@ -61,28 +62,17 @@ pub fn solve() {
         })
         .collect::<Vec<_>>();
 
+    // --- PART 1 ---
+    let mut operations_clone = operations.clone();
     loop {
-        operations.retain(|op| !op.eval(&mut map));
-        if operations.is_empty() {
+        operations_clone.retain(|op| !op.eval(&mut map));
+        if operations_clone.is_empty() {
             break;
         }
     }
 
-    // let mut res = map
-    //     .iter()
-    //     .filter(|op| op.0.starts_with("z"))
-    //     .collect::<Vec<_>>();
-    //
-    // res.sort();
-    // res.reverse();
-    //
-    // let decimal = res
-    //     .iter()
-    //     .fold(0u64, |acc, (_, val)| (acc << 1) | **val as u64);
-
     let mut decimal = 0u64;
     for i in 0.. {
-        // Well this make an allocation per key.
         let key = format!("z{:02}", i);
         if let Some(&val) = map.get(key.as_str()) {
             decimal |= (val as u64) << i;
@@ -91,4 +81,69 @@ pub fn solve() {
         }
     }
     println!("{}", decimal);
+
+    // --- PART 2 ---
+    // A correctly wired Full Adder for bit `i` MUST follow these structural rules:
+    // 1. x[i] XOR y[i] -> intermediate_xor
+    // 2. x[i] AND y[i] -> intermediate_and
+    // 3. intermediate_xor XOR carry_in -> z[i]  (This produces the final sum bit)
+    // 4. intermediate_xor AND carry_in -> intermediate_carry
+    // 5. intermediate_and OR intermediate_carry -> carry_out (This goes to the next bit)
+    //
+    // By checking each gate against these rules, we can find the wires that were swapped.
+
+    let mut wrong = Vec::new();
+
+    let highest_z = operations
+        .iter()
+        .filter(|op| op.res.starts_with('z'))
+        .map(|op| op.res)
+        .max()
+        .unwrap();
+
+    for op in &operations {
+        if op.res.starts_with('z') && op.op != "XOR" && op.res != highest_z {
+            wrong.push(op.res);
+        }
+
+        if op.op == "XOR"
+            && !op.res.starts_with('z')
+            && !op.a.starts_with('x')
+            && !op.a.starts_with('y')
+            && !op.b.starts_with('x')
+            && !op.b.starts_with('y')
+        {
+            wrong.push(op.res);
+        }
+
+        if op.op == "AND" && op.a != "x00" && op.b != "x00" {
+            for sub_op in &operations {
+                if (sub_op.a == op.res || sub_op.b == op.res) && sub_op.op != "OR" {
+                    wrong.push(op.res);
+                }
+            }
+        }
+
+        if op.op == "XOR" {
+            let is_xy_input = (op.a.starts_with('x') || op.b.starts_with('x'))
+                && (op.a.starts_with('y') || op.b.starts_with('y'));
+
+            if is_xy_input && !op.a.ends_with("00") && !op.b.ends_with("00") {
+                let mut feeds_into_xor = false;
+                for sub_op in &operations {
+                    if (sub_op.a == op.res || sub_op.b == op.res) && sub_op.op == "XOR" {
+                        feeds_into_xor = true;
+                        break;
+                    }
+                }
+                if !feeds_into_xor {
+                    wrong.push(op.res);
+                }
+            }
+        }
+    }
+
+    wrong.sort();
+    wrong.dedup();
+    println!("{}", wrong.join(","));
 }
