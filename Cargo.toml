@@ -7,11 +7,10 @@ description = "Advent of Code solutions"
 keywords = ["aoc", "puzzles", "algorithms", "mathematics"]
 
 [profile.release]
-debug = true
+lto = true
+strip = true
 panic = "abort"
-# lto = "fat"
-# strip = true
-# overflow-checks = true
+codegen-units = 1
 
 [dependencies]
 nalgebra = "0.34.1"
